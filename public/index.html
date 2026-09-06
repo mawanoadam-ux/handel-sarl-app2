@@ -21,7 +21,72 @@ if(S.step===3){f.innerHTML='<h3>Où et quand ?</h3><div class="grid">'+select('q
 if(S.step===4){f.innerHTML='<h3>Quand souhaitez-vous recevoir notre retour ?</h3><p>Nous utilisons ce délai pour analyser votre demande, rechercher les options disponibles et vous apporter une réponse pertinente plutôt qu’une réponse automatique.</p><div class="choices" style="grid-template-columns:repeat(4,1fr)">'+[3,5,7,14].map(n=>`<button type="button" class="choice timing" data-n="${n}"><b>${n} jours</b><small>Réponse souhaitée</small></button>`).join('')+'</div><div class="field" style="margin-top:15px"><label>Ou une date précise</label><input id="responseDate" type="date"></div><div class="formActions"><button class="btn ghost" onclick="back()">← Retour</button><button class="btn primary" onclick="save4()">Continuer →</button></div>';f.querySelectorAll('.timing').forEach(b=>b.onclick=()=>{S.delay=b.dataset.n+' jours';f.querySelectorAll('.timing').forEach(x=>x.classList.remove('sel'));b.classList.add('sel')});return}
 if(S.step===5){let d=S.d;f.innerHTML='<h3>Vos coordonnées</h3><div class="grid">'+input('name','Nom complet')+input('phone','WhatsApp / téléphone','tel','+243 …')+input('email','Email','email','client@email.com')+select('contact','Préférence de contact',['WhatsApp','Appel téléphonique','Email'])+'</div><h3>Vérifiez votre demande</h3><div class="summary" id="sum"></div><div class="formActions"><button class="btn ghost" onclick="back()">← Retour</button><button class="btn primary" onclick="submit()">✓ Envoyer ma demande</button></div>';buildSum();}}
 function save2(){document.querySelectorAll('#form input,#form select,#form textarea').forEach(x=>S.d[x.id]=x.value);S.d.selected=[...document.querySelectorAll('#form .chip.on')].map(x=>x.dataset.v);S.step=3;render()}function save3(){['quartier','adresse','date','contraintes','description'].forEach(id=>S.d[id]=$('#'+id)?.value||'');S.step=4;render()}function save4(){if(!S.delay&&!$('#responseDate').value)return toast('Choisissez un délai d’au moins 3 jours ou une date précise.');S.d.responseDate=$('#responseDate').value;S.step=5;render()}function back(){if(S.step>1){S.step--;render()}}function buildSum(){let d=S.d;$('#sum').innerHTML=`<div class="row"><span>Service</span><b>${S.service}</b></div><div class="row"><span>Type</span><b>${d.property||d.site||'—'}</b></div><div class="row"><span>Budget</span><b>${d.budget||'—'} ${d.currency||''}</b></div><div class="row"><span>Quartier</span><b>${d.quartier||'—'}</b></div><div class="row"><span>Date</span><b>${d.date||'—'}</b></div><div class="row"><span>Délai</span><b>${S.delay||d.responseDate}</b></div>`}
-async function submit(){if(!$('#name').value||!$('#phone').value)return toast('Le nom et le téléphone sont obligatoires.');let payload={service:S.service,...S.d,client:{name:$('#name').value,phone:$('#phone').value,email:$('#email').value,contact:$('#contact').value},responseDelay:S.delay||S.d.responseDate};try{let r=await fetch('/api/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});let j=await r.json();if(!r.ok)throw Error(j.error||'Erreur');confirmPage(j.reference||'HS-'+Math.floor(100000+Math.random()*900000),payload.responseDelay)}catch(e){localStorage.setItem('handel_request',JSON.stringify(payload));confirmPage('HS-'+Math.floor(100000+Math.random()*900000),payload.responseDelay,true)}}function getNextWhatsAppUrl(text){const nums=['243973322705','243970184444','243990772003'];let i=Number(localStorage.getItem('handel_wa_index')||0);const n=nums[i%nums.length];localStorage.setItem('handel_wa_index',String((i+1)%nums.length));return 'https://wa.me/'+n+'?text='+encodeURIComponent(text)}function confirmPage(ref,delay,offline=false){const p=payloadSafe();const msg='NOUVELLE DEMANDE HANDEL SARL\nRéférence : '+ref+'\nClient : '+p.client.name+'\nTéléphone : '+p.client.phone+'\nService : '+S.service+'\nBudget : '+(S.d.budget||'—')+'\nQuartier : '+(S.d.quartier||'—')+'\nDélai : '+delay+'\nDescription : '+(S.d.description||S.d.otherDesc||'—');const waUrl=getNextWhatsAppUrl(msg);$('.panel').innerHTML=`<div style="text-align:center;padding:35px"><div style="font-size:65px">✓</div><h2>Votre demande est bien enregistrée.</h2><p>Merci pour votre confiance. Notre équipe Handel Sarl a bien reçu votre demande. Nous allons l’étudier et revenir vers vous selon le délai choisi.</p><div class="card" style="max-width:500px;margin:25px auto"><p>Numéro de demande</p><h2 style="color:var(--b)">${ref}</h2><p>Délai : <b>${delay}</b></p>${offline?'<small class="muted">Mode local : connectez le serveur pour activer la réception automatique.</small>':''}</div><a class="btn red" target="_blank" href="${waUrl}">Contacter Handel Sarl sur WhatsApp</a><p class="muted" style="margin-top:12px">La demande est orientée automatiquement vers le prochain numéro disponible.</p></div>`}
+async function submit(){if(!$('#name').value||!$('#phone').value)return toast('Le nom et le téléphone sont obligatoires.');let payload={service:S.service,...S.d,client:{name:$('#name').value,phone:$('#phone').value,email:$('#email').value,contact:$('#contact').value},responseTime:S.delay||S.d.responseDate};try{let r=await fetch('/api/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});let j=await r.json();if(!r.ok)throw Error(j.error||'Erreur');confirmPage(j.reference||'HS-'+Math.floor(100000+Math.random()*900000),payload.responseTime)}catch(e){localStorage.setItem('handel_request',JSON.stringify(payload));confirmPage('HS-'+Math.floor(100000+Math.random()*900000),payload.responseTime,true)}}function getNextWhatsAppUrl(text){const nums=['243973322705','243970184444','243990772003'];let i=Number(localStorage.getItem('handel_wa_index')||0);const n=nums[i%nums.length];localStorage.setItem('handel_wa_index',String((i+1)%nums.length));return 'https://wa.me/'+n+'?text='+encodeURIComponent(text)}function confirmPage(ref,delay,offline=false){const p=payloadSafe();const msg='NOUVELLE DEMANDE HANDEL SARL\nRéférence : '+ref+'\nClient : '+p.client.name+'\nTéléphone : '+p.client.phone+'\nService : '+S.service+'\nBudget : '+(S.d.budget||'—')+'\nQuartier : '+(S.d.quartier||'—')+'\nDélai : '+delay+'\nDescription : '+(S.d.description||S.d.otherDesc||'—');const waUrl=getNextWhatsAppUrl(msg);$('.panel').innerHTML=`<div style="text-align:center;padding:35px"><div style="font-size:65px">✓</div><h2>Votre demande est bien enregistrée.</h2><p>Merci pour votre confiance. Notre équipe Handel Sarl a bien reçu votre demande. Nous allons l’étudier et revenir vers vous selon le délai choisi.</p><div class="card" style="max-width:500px;margin:25px auto"><p>Numéro de demande</p><h2 style="color:var(--b)">${ref}</h2><p>Délai : <b>${delay}</b></p>${offline?'<small class="muted">Mode local : connectez le serveur pour activer la réception automatique.</small>':''}</div><a class="btn red" target="_blank" href="${waUrl}">Contacter Handel Sarl sur WhatsApp</a><p class="muted" style="margin-top:12px">La demande est orientée automatiquement vers le prochain numéro disponible.</p></div>`}
 function payloadSafe(){return {client:{name:$('#name')?.value||S.d.client?.name||'Client',phone:$('#phone')?.value||S.d.client?.phone||''}}}
 $('#news').onsubmit=e=>{e.preventDefault();toast('Inscription enregistrée. Le consentement newsletter reste séparé de votre demande.');e.target.reset()};document.querySelectorAll('#prefs .chip').forEach(c=>c.onclick=()=>c.classList.toggle('on'));const scene=$('#scene');if(scene&&!matchMedia('(prefers-reduced-motion: reduce)').matches)scene.onpointermove=e=>{let r=scene.getBoundingClientRect(),x=e.clientX/r.width-.5,y=e.clientY/r.height-.5;scene.style.transform=`rotateY(${x*6}deg) rotateX(${-y*4}deg)`};render();
-</script></body></html>
+</script>
+<script id="HANDelSarlSubmitFix">
+/* Robust form submission fallback for Render */
+(function () {
+  function initRequestForm() {
+    const forms = Array.from(document.querySelectorAll('form'));
+    const form = forms.find(f =>
+      /demande|request|contact/i.test(f.id || '') ||
+      f.querySelector('button[type="submit"], input[type="submit"]')
+    );
+    if (!form || form.dataset.renderFixInstalled) return;
+    form.dataset.renderFixInstalled = '1';
+
+    form.addEventListener('submit', async function (e) {
+      /* Let the existing handler run if one exists. This fallback only takes
+         over when the form has not been prevented by another listener. */
+      setTimeout(async () => {
+        if (e.defaultPrevented) return;
+        e.preventDefault();
+
+        const btn = form.querySelector('button[type="submit"], input[type="submit"]');
+        const original = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = 'Envoi…'; }
+
+        const fd = new FormData(form);
+        const data = Object.fromEntries(fd.entries());
+
+        try {
+          const res = await fetch('/api/requests', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+              name: data.name || data.nom || '',
+              phone: data.phone || data.telephone || '',
+              email: data.email || '',
+              contact: data.contact || data.message || '',
+              responseTime: data.responseTime || data.responseDelay || ''
+            })
+          });
+
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+
+          let result = {};
+          try { result = await res.json(); } catch (_) {}
+
+          alert(result.message || 'Votre demande a bien été enregistrée.');
+          form.reset();
+        } catch (err) {
+          console.error('Erreur envoi demande:', err);
+          alert("Votre demande n'a pas pu être enregistrée. Vérifiez votre connexion et réessayez.");
+        } finally {
+          if (btn) { btn.disabled = false; btn.innerHTML = original; }
+        }
+      }, 0);
+    }, true);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRequestForm);
+  } else {
+    initRequestForm();
+  }
+})();
+</script>
+
+</body></html>
